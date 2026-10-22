@@ -26,7 +26,7 @@ type ComposeFile = { name?: unknown; services?: Record<string, Service>; volumes
 
 function loadCompose(): ComposeFile {
   if (!existsSync(COMPOSE_FILE)) return {};
-  return (parse(readFileSync(COMPOSE_FILE, 'utf8')) ?? {}) as ComposeFile;
+  return (parse(readFileSync(COMPOSE_FILE, 'utf8'), { merge: true }) ?? {}) as ComposeFile;
 }
 
 function asList(value: unknown): unknown[] {
