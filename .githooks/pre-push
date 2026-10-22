@@ -1,0 +1,21 @@
+#!/bin/sh
+# pre-push (машинерія курсу): еталонні гілки lesson-NN-solution існують ЛИШЕ локально.
+# Git передає на stdin рядки: <local ref> <local sha> <remote ref> <remote sha>.
+# Блокуємо будь-який push, що зачіпає refs/heads/lesson-*-solution — зокрема `git push --all` і `--mirror`.
+blocked=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  for ref in "$local_ref" "$remote_ref"; do
+    case "$ref" in
+      refs/heads/lesson-*-solution)
+        echo "[pre-push] відхилено: '$ref' — еталонна гілка, вона ніколи не пушиться (див. README.md)." >&2
+        blocked=1
+        break
+        ;;
+    esac
+  done
+done
+if [ "$blocked" -ne 0 ]; then
+  echo "[pre-push] пуш скасовано повністю. Пуш конкретної гілки: git push origin lesson/NN" >&2
+  exit 1
+fi
+exit 0

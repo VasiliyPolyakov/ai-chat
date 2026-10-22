@@ -1,0 +1,25 @@
+# Залежності та збірки
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Секрети: жоден .env не потрапляє в репо (крім прикладу і тестових нечутливих значень)
+.env
+.env.*
+!.env.example
+!apps/api/.env.test
+
+# Terraform (з L13)
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.example.tfvars
+.terraform/
+
+# ОС і редактори
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log

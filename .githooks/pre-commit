@@ -1,0 +1,8 @@
+#!/bin/sh
+# pre-commit (машинерія курсу): пошук секретів у staged-змінах через gitleaks.
+# Якщо gitleaks не встановлено — лише попередження, коміт не блокується.
+if command -v gitleaks >/dev/null 2>&1; then
+  exec gitleaks git --pre-commit --staged --redact --no-banner
+fi
+echo "[pre-commit] warning: gitleaks не встановлено — перевірку секретів пропущено (macOS: brew install gitleaks)." >&2
+exit 0

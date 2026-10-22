@@ -1,0 +1,37 @@
+{
+  "name": "ai-chat",
+  "private": true,
+  "description": "Курс: AI-чат на NestJS + PostgreSQL + TypeORM (монорепо: apps/api, apps/web, infra, course)",
+  "license": "UNLICENSED",
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "prepare": "git rev-parse --is-inside-work-tree >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
+    "dev": "concurrently --kill-others-on-fail --names api,web --prefix-colors blue,magenta \"npm run start:dev -w apps/api\" \"npm run dev -w apps/web\"",
+    "db:up": "docker compose -f infra/compose.dev.yml up -d --wait",
+    "db:down": "docker compose -f infra/compose.dev.yml down",
+    "lint": "eslint . && node scripts/check-architecture.mjs",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run test -w apps/api && npm run test -w apps/web",
+    "test:e2e": "npm run test:e2e -w apps/api",
+    "test:infra": "npm run test:infra -w apps/api",
+    "lesson:check": "node scripts/lesson-check.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^10.0.6",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.72.0"
+  }
+}
