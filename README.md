@@ -26,6 +26,7 @@
 ```bash
 nvm use                         # Node 24
 npm ci                          # залежності + git hooks (core.hooksPath = .githooks)
+cp .env.example apps/api/.env   # конфіг для розробки (api запускається з теки apps/api)
 npm run dev                     # api (Nest, :3000) + web (Vite, :5173, проксі /api → :3000)
 npm run lesson:check -- 1       # перевірка заняття 1
 ```

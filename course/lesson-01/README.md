@@ -83,7 +83,7 @@ PostgreSQL з'являється вже тут, хоча працювати з �
 - **Healthcheck** (`pg_isready`) — Compose знає, коли Postgres готовий приймати з'єднання; `docker compose up -d --wait` (наш `npm run db:up`) чекає саме на healthy.
 - Офіційний образ `postgres` створює БД з `POSTGRES_DB` і користувача з `POSTGRES_USER`/`POSTGRES_PASSWORD` під час першої ініціалізації; дані зберігаються в `/var/lib/postgresql/data`.
 
-Якщо на машині вже працює локальний Postgres на 5432 (наприклад, з Homebrew), порт хоста для `db` можна зробити іншим (Контракт фіксує лише `db-test` на 5433) і відповідно поправити `DATABASE_URL` у своєму `.env`.
+Якщо на машині вже працює локальний Postgres на 5432 (наприклад, з Homebrew), порт хоста для `db` можна зробити іншим (Контракт фіксує лише `db-test` на 5433) і відповідно поправити `DATABASE_URL` у `apps/api/.env`.
 
 ## Завдання
 
