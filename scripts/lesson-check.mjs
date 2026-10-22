@@ -327,12 +327,15 @@ function dockerPreflight() {
 }
 
 let ghStatus;
+// S0/remote: skip — лише коли GitHub-репо ще немає (origin відсутній або не GitHub, напр. G3-клон).
+// Якщо origin — GitHub, а gh недоступний, це fail з [preflight]: --full не може бути зеленим без перевірки.
 function ghPreflight() {
   if (ghStatus) return ghStatus;
   const origin = git('remote', 'get-url', 'origin');
   if (origin.code !== 0) {
     ghStatus = {
       ok: false,
+      skip: true,
       message: 'немає remote origin — спершу створи GitHub-репо (Підготовка L01)',
     };
     return ghStatus;
@@ -341,20 +344,27 @@ function ghPreflight() {
   if (!/github\.com[:/]/.test(originUrl)) {
     ghStatus = {
       ok: false,
+      skip: true,
       message: `remote origin не вказує на GitHub (${originUrl}) — remote-тести потребують GitHub-репо`,
     };
     return ghStatus;
   }
   const auth = run('gh', ['auth', 'status']);
-  ghStatus =
-    auth.code === 0
-      ? { ok: true, message: `gh автентифіковано, origin: ${origin.stdout.trim()}` }
-      : {
-          ok: false,
-          message: auth.error
-            ? 'gh CLI не встановлено'
-            : 'gh не автентифіковано — виконай gh auth login',
-        };
+  if (auth.code === 0) {
+    ghStatus = { ok: true, skip: false, message: `gh автентифіковано, origin: ${originUrl}` };
+  } else if (auth.error) {
+    ghStatus = {
+      ok: false,
+      skip: false,
+      message: `[preflight] origin — GitHub (${originUrl}), але gh CLI не встановлено: brew install gh, потім gh auth login`,
+    };
+  } else {
+    ghStatus = {
+      ok: false,
+      skip: false,
+      message: `[preflight] origin — GitHub (${originUrl}), але gh не автентифіковано: gh auth login`,
+    };
+  }
   return ghStatus;
 }
 
@@ -573,10 +583,14 @@ for (const k of stepsToRun) {
       log('  skip: remote-тести запускаються лише з --full');
     } else {
       const gh = ghPreflight();
-      if (!gh.ok) {
+      if (!gh.ok && gh.skip) {
         skipped = !ran;
         reasons.push(`remote пропущено: ${gh.message}`);
         log(`  skip: remote-тести пропущено — ${gh.message}`);
+      } else if (!gh.ok) {
+        stepOk = false;
+        reasons.push('gh недоступний');
+        log(`  ${gh.message}`);
       } else {
         verbose(`  ${gh.message}`);
         const pattern = files
