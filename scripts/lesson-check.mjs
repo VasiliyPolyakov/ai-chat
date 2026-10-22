@@ -337,6 +337,14 @@ function ghPreflight() {
     };
     return ghStatus;
   }
+  const originUrl = origin.stdout.trim();
+  if (!/github\.com[:/]/.test(originUrl)) {
+    ghStatus = {
+      ok: false,
+      message: `remote origin не вказує на GitHub (${originUrl}) — remote-тести потребують GitHub-репо`,
+    };
+    return ghStatus;
+  }
   const auth = run('gh', ['auth', 'status']);
   ghStatus =
     auth.code === 0
