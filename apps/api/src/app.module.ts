@@ -1,11 +1,8 @@
 import { Module } from '@nestjs/common';
+import { AppConfigModule } from './config/app-config.module';
+import { HealthModule } from './health/health.module';
 
-/**
- * [FIX] Фіксована точка курсу: `export class AppModule`.
- * e2e-тести піднімають справжній застосунок у процесі тесту саме з цього класу.
- * Що імпортувати в `imports` — вирішуєш ти.
- */
 @Module({
-  imports: [],
+  imports: [AppConfigModule, HealthModule],
 })
 export class AppModule {}

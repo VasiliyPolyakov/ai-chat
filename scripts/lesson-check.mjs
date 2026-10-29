@@ -154,6 +154,11 @@ function listFiles(dir, predicate) {
 }
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const indent = (text) =>
+  text
+    .split('\n')
+    .map((l) => `    ${l}`)
+    .join('\n');
 
 function tcpReachable(host, port, timeoutMs = 2000) {
   return new Promise((resolve) => {
@@ -218,7 +223,7 @@ if (!existsSync(ENV_TEST)) {
   );
   process.exit(1);
 }
-const envTest = { ...readEnvFile(ENV_TEST) };
+const envTest = readEnvFile(ENV_TEST);
 for (const key of Object.keys(envTest))
   if (process.env[key] !== undefined) envTest[key] = process.env[key];
 
@@ -327,26 +332,44 @@ function dockerPreflight() {
 }
 
 let ghStatus;
+// S0/remote: skip — лише коли GitHub-репо ще немає (origin відсутній або не GitHub, напр. G3-клон).
+// Якщо origin — GitHub, а gh недоступний, це fail з [preflight]: --full не може бути зеленим без перевірки.
 function ghPreflight() {
   if (ghStatus) return ghStatus;
   const origin = git('remote', 'get-url', 'origin');
   if (origin.code !== 0) {
     ghStatus = {
       ok: false,
+      skip: true,
       message: 'немає remote origin — спершу створи GitHub-репо (Підготовка L01)',
     };
     return ghStatus;
   }
+  const originUrl = origin.stdout.trim();
+  if (!/github\.com[:/]/.test(originUrl)) {
+    ghStatus = {
+      ok: false,
+      skip: true,
+      message: `remote origin не вказує на GitHub (${originUrl}) — remote-тести потребують GitHub-репо`,
+    };
+    return ghStatus;
+  }
   const auth = run('gh', ['auth', 'status']);
-  ghStatus =
-    auth.code === 0
-      ? { ok: true, message: `gh автентифіковано, origin: ${origin.stdout.trim()}` }
-      : {
-          ok: false,
-          message: auth.error
-            ? 'gh CLI не встановлено'
-            : 'gh не автентифіковано — виконай gh auth login',
-        };
+  if (auth.code === 0) {
+    ghStatus = { ok: true, skip: false, message: `gh автентифіковано, origin: ${originUrl}` };
+  } else if (auth.error) {
+    ghStatus = {
+      ok: false,
+      skip: false,
+      message: `[preflight] origin — GitHub (${originUrl}), але gh CLI не встановлено: brew install gh, потім gh auth login`,
+    };
+  } else {
+    ghStatus = {
+      ok: false,
+      skip: false,
+      message: `[preflight] origin — GitHub (${originUrl}), але gh не автентифіковано: gh auth login`,
+    };
+  }
   return ghStatus;
 }
 
@@ -426,11 +449,7 @@ function runJest({ project, pattern, label, passWithNoTests = false }) {
   if (process.stdout.isTTY) args.push('--colors');
   verbose(`  $ jest ${args.slice(1).join(' ')}`);
 
-  const res = spawnSync(process.execPath, args, {
-    cwd: API,
-    encoding: 'utf8',
-    env: { ...process.env },
-  });
+  const res = spawnSync(process.execPath, args, { cwd: API, encoding: 'utf8' });
   const output = `${res.stdout ?? ''}${res.stderr ?? ''}`;
 
   let report;
@@ -479,13 +498,7 @@ function runJest({ project, pattern, label, passWithNoTests = false }) {
 function printOutput(result, force = false) {
   if (opts.verbose || force) {
     const text = result.output.trim();
-    if (text)
-      log(
-        text
-          .split('\n')
-          .map((l) => `    ${l}`)
-          .join('\n'),
-      );
+    if (text) log(indent(text));
   }
   for (const note of result.notes) log(`  ${note}`);
 }
@@ -512,7 +525,19 @@ for (const k of stepsToRun) {
     continue;
   }
 
-  // e2e
+  const runKind = (kind) => {
+    const pattern = files
+      .filter((f) => f.kind === kind)
+      .map((f) => escapeRe(`test/lessons/${lessonId}/${f.name}`))
+      .join('|');
+    const r = runJest({ project: kind, pattern, label });
+    ran = true;
+    passed += r.passed;
+    total += r.total;
+    if (!r.ok) stepOk = false;
+    printOutput(r, !r.ok);
+  };
+
   if (kinds.has('e2e')) {
     const needsDb = !(DB_FREE_STEPS[N]?.has(k) ?? false);
     if (needsDb) {
@@ -523,19 +548,9 @@ for (const k of stepsToRun) {
         reasons.push('db-test недоступна');
       } else verbose(`  ${db.message}`);
     }
-    const pattern = files
-      .filter((f) => f.kind === 'e2e')
-      .map((f) => escapeRe(`test/lessons/${lessonId}/${f.name}`))
-      .join('|');
-    const r = runJest({ project: 'e2e', pattern, label });
-    ran = true;
-    passed += r.passed;
-    total += r.total;
-    if (!r.ok) stepOk = false;
-    printOutput(r, !r.ok);
+    runKind('e2e');
   }
 
-  // infra
   if (kinds.has('infra')) {
     const docker = dockerPreflight();
     if (!docker.ok) {
@@ -543,16 +558,7 @@ for (const k of stepsToRun) {
       stepOk = false;
       reasons.push('Docker недоступний');
     } else {
-      const pattern = files
-        .filter((f) => f.kind === 'infra')
-        .map((f) => escapeRe(`test/lessons/${lessonId}/${f.name}`))
-        .join('|');
-      const r = runJest({ project: 'infra', pattern, label });
-      ran = true;
-      passed += r.passed;
-      total += r.total;
-      if (!r.ok) stepOk = false;
-      printOutput(r, !r.ok);
+      runKind('infra');
     }
   }
 
@@ -565,22 +571,17 @@ for (const k of stepsToRun) {
       log('  skip: remote-тести запускаються лише з --full');
     } else {
       const gh = ghPreflight();
-      if (!gh.ok) {
+      if (!gh.ok && gh.skip) {
         skipped = !ran;
         reasons.push(`remote пропущено: ${gh.message}`);
         log(`  skip: remote-тести пропущено — ${gh.message}`);
+      } else if (!gh.ok) {
+        stepOk = false;
+        reasons.push('gh недоступний');
+        log(`  ${gh.message}`);
       } else {
         verbose(`  ${gh.message}`);
-        const pattern = files
-          .filter((f) => f.kind === 'remote')
-          .map((f) => escapeRe(`test/lessons/${lessonId}/${f.name}`))
-          .join('|');
-        const r = runJest({ project: 'remote', pattern, label });
-        ran = true;
-        passed += r.passed;
-        total += r.total;
-        if (!r.ok) stepOk = false;
-        printOutput(r, !r.ok);
+        runKind('remote');
       }
     }
   }
@@ -606,7 +607,7 @@ if (opts.step === undefined && opts.regression && !hardFailure) {
 
   if (prior.length > 0 || studentTests.length > 0) {
     const parts = [...prior.map((id) => `test/lessons/${id}/`), 'test/student/'];
-    if (prior.length > 0 && N >= 2) {
+    if (prior.length > 0) {
       const db = await dbPreflight();
       if (!db.ok) log(`  ${db.message}`);
     }
@@ -675,7 +676,6 @@ if (opts.step === undefined && opts.regression && !hardFailure) {
     });
     printOutput(r, !r.ok);
   }
-  if (opts.full) log('  infra-тести: з’являться з L03 (зараз немає)');
   log('');
 }
 
@@ -694,13 +694,7 @@ if (opts.step === undefined) {
     const text = `${r.stdout}${r.stderr}`.trim();
     if (r.code !== 0 || opts.verbose) {
       log(`  npm run ${script}:`);
-      if (text)
-        log(
-          text
-            .split('\n')
-            .map((l) => `    ${l}`)
-            .join('\n'),
-        );
+      if (text) log(indent(text));
     } else {
       log(`  npm run ${script}: ok`);
     }

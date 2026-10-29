@@ -1,0 +1,42 @@
+name: chat-dev
+
+x-postgres: &postgres
+  image: postgres:17-alpine
+  restart: unless-stopped
+  environment: &postgres-env
+    # Dev-only credentials, not secrets.
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+  healthcheck:
+    # $$ defers expansion to the container env instead of the host.
+    test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+    interval: 2s
+    timeout: 3s
+    retries: 15
+    start_period: 5s
+
+services:
+  db:
+    <<: *postgres
+    environment:
+      <<: *postgres-env
+      POSTGRES_DB: chat_dev
+    ports:
+      # Override per machine via DB_HOST_PORT (e.g. in infra/.env) if 5432 is taken.
+      - '127.0.0.1:${DB_HOST_PORT:-5432}:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  # tmpfs: fresh DB on every container restart.
+  db-test:
+    <<: *postgres
+    environment:
+      <<: *postgres-env
+      POSTGRES_DB: chat_test
+    ports:
+      - '127.0.0.1:5433:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+
+volumes:
+  db-data:
