@@ -446,6 +446,9 @@ const COMPILE_ERROR = /TS\d{4}|SyntaxError|Cannot find module/;
 function runJest({ project, pattern, label, passWithNoTests = false }) {
   const outputFile = join(REPORT_DIR, `report-${++reportSeq}.json`);
   const args = [
+    // require() ESM-only пакетів (напр. @nestjs/typeorm 12) у Jest працює лише з vm-модулями.
+    '--experimental-vm-modules',
+    '--disable-warning=ExperimentalWarning',
     jestBin,
     '--selectProjects',
     project,

@@ -9,9 +9,9 @@
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "jest --selectProjects unit e2e --runInBand --passWithNoTests",
-    "test:e2e": "jest --selectProjects e2e --runInBand --passWithNoTests",
-    "test:infra": "jest --selectProjects infra --runInBand --passWithNoTests"
+    "test": "NODE_OPTIONS=\"--experimental-vm-modules --disable-warning=ExperimentalWarning\" jest --selectProjects unit e2e --runInBand --passWithNoTests",
+    "test:e2e": "NODE_OPTIONS=\"--experimental-vm-modules --disable-warning=ExperimentalWarning\" jest --selectProjects e2e --runInBand --passWithNoTests",
+    "test:infra": "NODE_OPTIONS=\"--experimental-vm-modules --disable-warning=ExperimentalWarning\" jest --selectProjects infra --runInBand --passWithNoTests"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.7",
