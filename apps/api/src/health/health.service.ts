@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import type { EnvironmentVariables } from '../config/env.validation';
+import { AppConfigService } from '../config/app-config.service';
 
 /**
  * Форма відповіді health-ендпоінту.
@@ -24,12 +23,12 @@ export interface HealthStatus {
  */
 @Injectable()
 export class HealthService {
-  constructor(private readonly config: ConfigService<EnvironmentVariables, true>) {}
+  constructor(private readonly config: AppConfigService) {}
 
   check(): HealthStatus {
     return {
       status: 'ok',
-      version: this.config.get('APP_VERSION', { infer: true }),
+      version: this.config.version,
       checks: {},
     };
   }

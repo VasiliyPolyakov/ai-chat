@@ -1,14 +1,14 @@
-import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { configureApp } from './app.setup';
-import type { EnvironmentVariables } from './config/env.validation';
+import { AppConfigService } from './config/app-config.service';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   configureApp(app);
-  const config = app.get<ConfigService<EnvironmentVariables, true>>(ConfigService);
-  await app.listen(config.get('PORT', { infer: true }));
+  // Поза класами конструктор-ін'єкції немає, тож беремо провайдер з контейнера напряму.
+  const config = app.get(AppConfigService);
+  await app.listen(config.port);
 }
 
 void bootstrap();
