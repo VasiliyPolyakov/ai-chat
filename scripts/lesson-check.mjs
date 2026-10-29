@@ -388,15 +388,22 @@ if (!isGitRepo) {
     .sort();
   for (const id of lessonDirs) {
     const rel = `apps/api/test/lessons/${id}`;
-    const base = git(
-      'log',
-      '-1',
-      '--format=%H',
-      '-E',
-      `--grep=^test\\(${id}\\): acceptance tests|contract migration|^fix\\(tooling\\)`,
-      '--',
-      rel,
-    ).stdout.trim();
+    // Squash-merge у main прибирає коміти з тестами з історії. Тоді база — start-тег поточного
+    // етапу (тести змінюються лише до тегу) або, якщо його ще немає, start-тег етапу тестів.
+    const tagCommit = (tag) =>
+      git('rev-parse', '-q', '--verify', `refs/tags/${tag}^{commit}`).stdout.trim();
+    const base =
+      git(
+        'log',
+        '-1',
+        '--format=%H',
+        '-E',
+        `--grep=^test\\(${id}\\): acceptance tests|contract migration|^fix\\(tooling\\)`,
+        '--',
+        rel,
+      ).stdout.trim() ||
+      tagCommit(`lesson-${pad(N)}-start`) ||
+      tagCommit(`lesson-${id.slice(1)}-start`);
     if (!base) {
       warn(`[tooling] для ${rel} не знайдено коміт з тестами — цілісність не перевірено`);
       continue;
