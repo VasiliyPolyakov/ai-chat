@@ -1,5 +1,5 @@
 import { plainToInstance, Type } from 'class-transformer';
-import { IsEnum, IsInt, IsNotEmpty, IsString, Max, Min, validateSync } from 'class-validator';
+import { IsEnum, IsInt, IsNotEmpty, IsString, Matches, Max, Min, validateSync } from 'class-validator';
 
 export enum AppEnv {
   Development = 'development',
@@ -21,6 +21,7 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsNotEmpty()
+  @Matches(/^postgres(ql)?:\/\//, { message: 'DATABASE_URL must be a postgres:// URL' })
   DATABASE_URL: string;
 
   @IsString()
@@ -28,7 +29,7 @@ export class EnvironmentVariables {
   APP_VERSION: string = 'dev';
 }
 
-export function validate(config: Record<string, unknown>): EnvironmentVariables {
+export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {
   const env = plainToInstance(EnvironmentVariables, config);
   const errors = validateSync(env, { skipMissingProperties: false });
 

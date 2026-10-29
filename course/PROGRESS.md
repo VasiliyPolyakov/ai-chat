@@ -5,7 +5,7 @@
 
 | Заняття | Статус | `lesson-NN-start` | Еталон `lesson-NN-solution` (SHA) | G3 | Рев'ю | Merge-рішення | Год (факт) |
 |---|---|---|---|---|---|---|---|
-| L01 | generated | `8ac55f09c8b87edd9d68a912951298e08d614eba` | `a8753b20aed2bc8d6b744ea1de7102e7365d064a` | red on start, green on solution, `--full` green | — | — | — |
+| L01 | reviewed | `8ac55f09c8b87edd9d68a912951298e08d614eba` | `a8753b20aed2bc8d6b744ea1de7102e7365d064a` | red on start, green on solution, `--full` green | [review.md](lesson-01/review.md) (2026-10-29, `72b6df3`) | — | — |
 
 ## L01
 
@@ -27,6 +27,7 @@
   - `7e9cb88` — `CLAUDE.md`: протокол курсу (рев'ю, підказки, генерація G1–G3, машинерія, заборони) для нових сесій Claude; у еталоні — `a8753b2`.
   - **Стан:** усі `fix(course)` живуть на `lesson/01` і чекають merge у `main` на кроці M (remote немає — PR у `main` неможливий).
   - Після фіксів еталон повторно перевірено: `lesson:check -- 1` і `--full` зелені; S3 зелений і з compose-файлом на YAML-якорях.
+- **Рев'ю (2026-10-29):** `lesson/01` @ `72b6df3`, `lesson:check -- 1 --full` OK, blockers немає; рекомендації (опційно): `${DB_HOST_PORT:-5432}` у compose, `@Matches` для `DATABASE_URL`, `validate` → `validateEnv`. Деталі — `course/lesson-01/review.md`.
 - **Підказки:** див. `course/lesson-01/hints.md`
 
 ## Drift log

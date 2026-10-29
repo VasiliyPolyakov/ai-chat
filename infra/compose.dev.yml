@@ -22,8 +22,8 @@ services:
       <<: *postgres-env
       POSTGRES_DB: chat_dev
     ports:
-      # Host port 5434: local Postgres occupies 5432.
-      - '127.0.0.1:5434:5432'
+      # Override per machine via DB_HOST_PORT (e.g. in infra/.env) if 5432 is taken.
+      - '127.0.0.1:${DB_HOST_PORT:-5432}:5432'
     volumes:
       - db-data:/var/lib/postgresql/data
 

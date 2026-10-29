@@ -1,13 +1,13 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppConfigService } from './app-config.service';
-import { validate } from './env.validation';
+import { validateEnv } from './env.validation';
 
 @Global()
 @Module({
   imports: [
     ConfigModule.forRoot({
-      validate,
+      validate: validateEnv,
       // Tests set process.env directly; do not let .env files leak in.
       ignoreEnvFile: process.env.APP_ENV === 'test',
     }),
