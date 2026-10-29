@@ -12,6 +12,7 @@ export class EnvironmentVariables {
   @IsEnum(AppEnv)
   APP_ENV: AppEnv;
 
+  // Explicit @Type instead of enableImplicitConversion: env values are strings, convert only PORT.
   @Type(() => Number)
   @IsInt()
   @Min(1)

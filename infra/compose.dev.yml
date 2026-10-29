@@ -1,51 +1,33 @@
-# Postgres для локальної розробки (db) і для тестів (db-test).
-# Запуск: npm run db:up   (= docker compose -f infra/compose.dev.yml up -d --wait)
-# Зупинка: npm run db:down
-
-# Ім'я проєкту: від нього залежать імена контейнерів (chat-dev-db-1), мережі (chat-dev_default)
-# і томів (chat-dev_db-data). Без `name` Compose взяв би назву теки (`infra`), а вона може
-# збігтися з іншим стеком (L03 матиме свій `chat-stack`).
 name: chat-dev
 
-# `x-*` — поля-розширення: Compose їх ігнорує, а ми використовуємо як шаблон.
-# `&postgres` — YAML-якір (anchor), `<<: *postgres` нижче — злиття (merge key) цього шаблону в сервіс.
-# Так спільне (образ, користувач, healthcheck) описане один раз, а сервіси задають лише відмінності.
 x-postgres: &postgres
-  # alpine — менший образ; мажорна версія закріплена (17), бо дані між мажорними версіями
-  # Postgres несумісні: `postgres:latest` колись тихо стане 18 і не відкриє старий volume.
   image: postgres:17-alpine
   restart: unless-stopped
   environment: &postgres-env
-    # Лише для локальної розробки — це НЕ секрет (такі ж значення в .env.example / .env.test).
-    # Прод-паролі з'являться в L04 і житимуть у GitHub Secrets, а не в репо.
+    # Dev-only credentials, not secrets.
     POSTGRES_USER: postgres
     POSTGRES_PASSWORD: postgres
   healthcheck:
-    # pg_isready перевіряє, що сервер приймає з'єднання. `$$` — екранування для Compose:
-    # інакше він підставив би POSTGRES_* з оточення ХОСТА, а нам потрібні змінні КОНТЕЙНЕРА.
+    # $$ defers expansion to the container env instead of the host.
     test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
     interval: 2s
     timeout: 3s
     retries: 15
-    # Час на першу ініціалізацію (initdb), протягом якого невдалі перевірки не рахуються.
     start_period: 5s
 
 services:
-  # Dev-база: дані в іменованому volume — переживають `db:down`/`db:up` і перезапуск Docker.
   db:
     <<: *postgres
     environment:
       <<: *postgres-env
       POSTGRES_DB: chat_dev
     ports:
-      # хост:контейнер. 5434, бо 5432 на цій машині зайнятий локальним Postgres (Homebrew).
-      # 127.0.0.1 — порт видно лише з цієї машини, а не з усієї мережі (кав'ярня, офіс).
+      # Host port 5434: local Postgres occupies 5432.
       - '127.0.0.1:5434:5432'
     volumes:
       - db-data:/var/lib/postgresql/data
 
-  # Тестова база: дані на tmpfs (у RAM) — швидко, і кожен перезапуск контейнера дає чисту БД.
-  # Порт 5433 і назва chat_test зафіксовані контрактом (DATABASE_URL_TEST у apps/api/.env.test).
+  # tmpfs: fresh DB on every container restart.
   db-test:
     <<: *postgres
     environment:
@@ -56,7 +38,5 @@ services:
     tmpfs:
       - /var/lib/postgresql/data
 
-# Іменовані томи треба оголосити на верхньому рівні. Docker створить `chat-dev_db-data`.
-# Видалити дані dev-бази: docker compose -f infra/compose.dev.yml down -v
 volumes:
   db-data:

@@ -8,6 +8,7 @@ import { validate } from './env.validation';
   imports: [
     ConfigModule.forRoot({
       validate,
+      // Tests set process.env directly; do not let .env files leak in.
       ignoreEnvFile: process.env.APP_ENV === 'test',
     }),
   ],
