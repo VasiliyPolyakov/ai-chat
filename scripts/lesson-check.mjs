@@ -233,19 +233,23 @@ if (hooksPath !== '.githooks') {
 }
 
 // Фіксовані точки [FIX]: їх імпортують тести, тож зміна назв ламає запуск тестів.
+// Четвертий елемент — етап, з якого точка існує.
 const FIX_POINTS = [
-  ['apps/api/src/app.module.ts', /export\s+class\s+AppModule\b/, 'export class AppModule'],
+  ['apps/api/src/app.module.ts', /export\s+class\s+AppModule\b/, 'export class AppModule', 1],
   [
     'apps/api/src/app.setup.ts',
     /export\s+(async\s+)?function\s+configureApp\b|export\s+const\s+configureApp\b/,
     'export function configureApp(app)',
+    1,
   ],
+  ['apps/api/src/database/data-source.ts', /export\s+default\b/, 'export default <DataSource>', 2],
 ];
-for (const [file, re, expected] of FIX_POINTS) {
+for (const [file, re, expected, since] of FIX_POINTS) {
+  if (N < since) continue;
   const full = join(ROOT, file);
   if (!existsSync(full) || !re.test(readFileSync(full, 'utf8'))) {
     console.error(
-      `[preflight] фіксована точка [FIX] змінена: ${file} має містити \`${expected}\` (контракт етапу L01)`,
+      `[preflight] фіксована точка [FIX] змінена: ${file} має містити \`${expected}\` (контракт етапу L${pad(since)})`,
     );
     hardFailure = true;
   }
