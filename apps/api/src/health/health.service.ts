@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { EnvironmentVariables } from '../config/env.validation';
 
 /**
  * Форма відповіді health-ендпоінту.
@@ -22,11 +24,12 @@ export interface HealthStatus {
  */
 @Injectable()
 export class HealthService {
+  constructor(private readonly config: ConfigService<EnvironmentVariables, true>) {}
+
   check(): HealthStatus {
     return {
       status: 'ok',
-      // Тимчасово хардкод. У S2 це стане значенням APP_VERSION з валідованого конфігу.
-      version: '0.0.0',
+      version: this.config.get('APP_VERSION', { infer: true }),
       checks: {},
     };
   }
