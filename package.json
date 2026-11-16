@@ -17,6 +17,7 @@
     "migration:run": "npm run migration:run -w apps/api",
     "migration:revert": "npm run migration:revert -w apps/api",
     "migration:generate": "npm run migration:generate -w apps/api --",
+    "seed:admin": "npm run seed:admin -w apps/api",
     "lint": "eslint . && node scripts/check-architecture.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "format": "prettier --write .",
