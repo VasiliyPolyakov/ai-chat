@@ -4,7 +4,7 @@
 
 **Roadmap:** auth, розмови, асистенти в БД, Anthropic → Ollama → провайдер-абстракція, tool use, prompt caching, облік токенів, OpenAPI-документація; деплой на Hetzner VPS (Compose + Caddy + GitHub Actions → GHCR → SSH), інфраструктура в Terraform, бекапи в Cloudflare R2.
 
-Розробка йде етапами (`L01`, `L02`, …): кожен етап — гілка `lesson/NN`, PR у `main` і набір приймальних тестів у `apps/api/test/lessons/lNN`.
+Розробка йде етапами (`L01`, `L02`, …): кожен етап — гілка `feat/NN-<slug>` (напр. `feat/03-docker-ci`), PR у `main` і набір приймальних тестів у `apps/api/test/lessons/lNN`.
 
 ## Вимоги до оточення
 

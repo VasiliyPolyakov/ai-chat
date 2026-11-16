@@ -178,7 +178,7 @@ function tcpReachable(host, port, timeoutMs = 2000) {
 if (!existsSync(join(LESSONS, lessonId))) {
   console.error(
     `Тестів етапу ${N} немає (apps/api/test/lessons/${lessonId}). ` +
-      `Перевір гілку: git switch lesson/${pad(N)}`,
+      `Перевір гілку етапу: feat/${pad(N)}-<slug>`,
   );
   process.exit(1);
 }
