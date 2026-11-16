@@ -157,7 +157,8 @@ describe('L03.S2 live stack', () => {
   it('api is not reachable from the host directly', () => {
     expect(up.code).toBe(0);
     const published = stack.run(['port', 'api', '3000']);
-    const mapped = published.code === 0 && /:\d+/.test(published.stdout);
+    // Compose prints `:0` (or fails) for an unpublished port; only a real host port counts.
+    const mapped = published.code === 0 && /:[1-9]\d*\s*$/m.test(published.stdout);
     expect(mapped).toBe(false);
   });
 });
