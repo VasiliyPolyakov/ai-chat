@@ -5,21 +5,21 @@ import { validateEnv } from '../config/env.validation';
 import { buildDatabaseOptions } from './database.options';
 
 /**
- * [FIX] Фіксована точка: default export `DataSource`.
- * Його імпортують напряму — без Nest, тож ConfigModule тут не працює:
+ * [FIX] Fixed entry point: default export `DataSource`.
+ * Imported directly, without Nest, so ConfigModule isn't available here:
  *  - TypeORM CLI (`typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts`);
- *  - тестова інфраструктура (test/setup/global-setup.ts накочує міграції на db-test).
- * Тому env читаємо й валідуємо самі — тією ж функцією validateEnv, що й застосунок.
+ *  - test setup (test/setup/global-setup.ts runs migrations on db-test).
+ * So the env is loaded and validated here with the same validateEnv as the app.
  */
 
-// Аналог `ignoreEnvFile` з AppConfigModule: у тестах оточенням керують тести, .env не читаємо.
-// npm run -w apps/api запускає скрипт з теки apps/api, тож '.env' — це apps/api/.env.
-// loadEnvFile (вбудований у Node ≥ 20.12) НЕ перезаписує змінні, вже задані в оточенні.
+// Mirrors `ignoreEnvFile` in AppConfigModule: tests own their environment.
+// Scripts run from apps/api, so '.env' is apps/api/.env.
+// loadEnvFile never overrides variables already set in the environment.
 if (process.env.APP_ENV !== 'test' && existsSync('.env')) {
   process.loadEnvFile('.env');
 }
 
-// Невалідне оточення → CLI падає одразу з назвою змінної (як і застосунок на старті).
+// Invalid env → the CLI fails immediately, naming the variable (same as app startup).
 const env = validateEnv(process.env);
 
 export default new DataSource(buildDatabaseOptions(env.DATABASE_URL));

@@ -25,7 +25,9 @@ export class User {
   @Column({ type: 'varchar', length: 320 })
   email: string;
 
-  @Column({ name: 'password_hash', type: 'text' })
+  // Not selected by default, so the hash can't leak through find()/findOne() or a returned entity.
+  // Login must ask for it explicitly: .addSelect('user.passwordHash').
+  @Column({ name: 'password_hash', type: 'text', select: false })
   passwordHash: string;
 
   // enumName pins the Postgres type name (otherwise TypeORM generates users_role_enum).

@@ -10,13 +10,11 @@ export interface HealthStatus {
   checks: { db: { status: CheckStatus } };
 }
 
-// Скільки чекаємо відповіді БД. Health має відповідати швидко навіть коли база «зависла»,
-// інакше балансувальник/Compose отримають таймаут замість чіткого «down».
+// A hung database must not hang the probe: report "down" after this long.
 const DB_CHECK_TIMEOUT_MS = 2_000;
 
 @Injectable()
 export class HealthService {
-  // DataSource реєструє TypeOrmModule.forRootAsync — тому його можна інжектити як звичайний провайдер.
   constructor(
     private readonly config: AppConfigService,
     private readonly dataSource: DataSource,
@@ -38,11 +36,10 @@ export class HealthService {
     });
 
     try {
-      // SELECT 1 — найдешевший запит, що доводить: з'єднання з пулу живе і сервер відповідає.
       await Promise.race([this.dataSource.query('SELECT 1'), timeout]);
       return 'up';
     } catch {
-      // Помилку не прокидаємо: health має сказати «down», а не впасти з 500.
+      // Report "down" instead of failing the request with a 500.
       return 'down';
     } finally {
       clearTimeout(timer);
