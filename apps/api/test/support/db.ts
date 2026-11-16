@@ -30,3 +30,43 @@ export async function connectTestDb(): Promise<{ client?: Client; unavailable?: 
     return { unavailable: `${DB_TEST_UNAVAILABLE} (${reason})` };
   }
 }
+
+export interface DisposableDb {
+  name: string;
+  url: string;
+  drop(): Promise<void>;
+}
+
+/**
+ * Створює порожню одноразову базу `chat_migr_<rand>_test` на сервері db-test
+ * (для перевірок міграцій і revert, щоб не чіпати спільну chat_test).
+ */
+export async function createDisposableDb(): Promise<DisposableDb> {
+  const base = new URL(testDatabaseUrl());
+  const name = `chat_migr_${Math.random().toString(36).slice(2, 10)}_test`;
+
+  const admin = new Client({ connectionString: base.toString(), connectionTimeoutMillis: 3_000 });
+  await admin.connect();
+  try {
+    await admin.query(`CREATE DATABASE "${name}"`);
+  } finally {
+    await admin.end();
+  }
+
+  const url = new URL(base.toString());
+  url.pathname = `/${name}`;
+
+  return {
+    name,
+    url: url.toString(),
+    async drop() {
+      const client = new Client({ connectionString: base.toString() });
+      await client.connect();
+      try {
+        await client.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
+      } finally {
+        await client.end();
+      }
+    },
+  };
+}

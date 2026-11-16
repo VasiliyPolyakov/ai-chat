@@ -178,7 +178,7 @@ function tcpReachable(host, port, timeoutMs = 2000) {
 if (!existsSync(join(LESSONS, lessonId))) {
   console.error(
     `Тестів етапу ${N} немає (apps/api/test/lessons/${lessonId}). ` +
-      `Перевір гілку: git switch lesson/${pad(N)}`,
+      `Перевір гілку етапу: feat/${pad(N)}-<slug>`,
   );
   process.exit(1);
 }
@@ -233,19 +233,23 @@ if (hooksPath !== '.githooks') {
 }
 
 // Фіксовані точки [FIX]: їх імпортують тести, тож зміна назв ламає запуск тестів.
+// Четвертий елемент — етап, з якого точка існує.
 const FIX_POINTS = [
-  ['apps/api/src/app.module.ts', /export\s+class\s+AppModule\b/, 'export class AppModule'],
+  ['apps/api/src/app.module.ts', /export\s+class\s+AppModule\b/, 'export class AppModule', 1],
   [
     'apps/api/src/app.setup.ts',
     /export\s+(async\s+)?function\s+configureApp\b|export\s+const\s+configureApp\b/,
     'export function configureApp(app)',
+    1,
   ],
+  ['apps/api/src/database/data-source.ts', /export\s+default\b/, 'export default <DataSource>', 2],
 ];
-for (const [file, re, expected] of FIX_POINTS) {
+for (const [file, re, expected, since] of FIX_POINTS) {
+  if (N < since) continue;
   const full = join(ROOT, file);
   if (!existsSync(full) || !re.test(readFileSync(full, 'utf8'))) {
     console.error(
-      `[preflight] фіксована точка [FIX] змінена: ${file} має містити \`${expected}\` (контракт етапу L01)`,
+      `[preflight] фіксована точка [FIX] змінена: ${file} має містити \`${expected}\` (контракт етапу L${pad(since)})`,
     );
     hardFailure = true;
   }
@@ -388,15 +392,22 @@ if (!isGitRepo) {
     .sort();
   for (const id of lessonDirs) {
     const rel = `apps/api/test/lessons/${id}`;
-    const base = git(
-      'log',
-      '-1',
-      '--format=%H',
-      '-E',
-      `--grep=^test\\(${id}\\): acceptance tests|contract migration|^fix\\(tooling\\)`,
-      '--',
-      rel,
-    ).stdout.trim();
+    // Squash-merge у main прибирає коміти з тестами з історії. Тоді база — start-тег поточного
+    // етапу (тести змінюються лише до тегу) або, якщо його ще немає, start-тег етапу тестів.
+    const tagCommit = (tag) =>
+      git('rev-parse', '-q', '--verify', `refs/tags/${tag}^{commit}`).stdout.trim();
+    const base =
+      git(
+        'log',
+        '-1',
+        '--format=%H',
+        '-E',
+        `--grep=^test\\(${id}\\): acceptance tests|contract migration|^fix\\(tooling\\)`,
+        '--',
+        rel,
+      ).stdout.trim() ||
+      tagCommit(`lesson-${pad(N)}-start`) ||
+      tagCommit(`lesson-${id.slice(1)}-start`);
     if (!base) {
       warn(`[tooling] для ${rel} не знайдено коміт з тестами — цілісність не перевірено`);
       continue;
@@ -435,6 +446,9 @@ const COMPILE_ERROR = /TS\d{4}|SyntaxError|Cannot find module/;
 function runJest({ project, pattern, label, passWithNoTests = false }) {
   const outputFile = join(REPORT_DIR, `report-${++reportSeq}.json`);
   const args = [
+    // require() ESM-only пакетів (напр. @nestjs/typeorm 12) у Jest працює лише з vm-модулями.
+    '--experimental-vm-modules',
+    '--disable-warning=ExperimentalWarning',
     jestBin,
     '--selectProjects',
     project,

@@ -15,7 +15,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   done
 done
 if [ "$blocked" -ne 0 ]; then
-  echo "[pre-push] пуш скасовано повністю. Пуш конкретної гілки: git push origin lesson/NN" >&2
+  echo "[pre-push] пуш скасовано повністю. Пуш конкретної гілки: git push origin feat/NN-<slug>" >&2
   exit 1
 fi
 exit 0

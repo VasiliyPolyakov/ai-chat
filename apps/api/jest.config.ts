@@ -31,6 +31,8 @@ const config: Config = {
       ...common,
       displayName: 'e2e',
       testMatch: ['<rootDir>/test/**/*.e2e-spec.ts'],
+      // З L02: один раз перед e2e — db-guard і міграції з src/database/data-source.ts на db-test.
+      globalSetup: '<rootDir>/test/setup/global-setup.ts',
       testTimeout: 30_000,
     },
     {
