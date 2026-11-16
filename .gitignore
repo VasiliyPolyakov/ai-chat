@@ -26,3 +26,7 @@ coverage/
 
 # Стан оркестратора (OMC)
 .omc/
+
+# Playwright
+test-results/
+playwright-report/
