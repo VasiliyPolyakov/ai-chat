@@ -1,0 +1,31 @@
+# Build context = repository root (one lock file for all workspaces).
+# Allow-list: everything is excluded, then only what the images need is re-included.
+# A new file in the repo stays out of the images until it is listed here.
+*
+
+# Workspace manifests: `npm ci` validates the lock file against every workspace.
+!package.json
+!package-lock.json
+!tsconfig.base.json
+!apps/api/package.json
+!apps/web/package.json
+
+# api: build config + sources
+!apps/api/nest-cli.json
+!apps/api/tsconfig.json
+!apps/api/tsconfig.build.json
+!apps/api/src/
+
+# web: build config + sources
+!apps/web/index.html
+!apps/web/vite.config.ts
+!apps/web/tsconfig.json
+!apps/web/src/
+
+# Re-excluded inside the allowed folders
+**/.env*
+**/*.spec.ts
+**/*.test.ts
+**/*.test.tsx
+**/node_modules
+**/dist
