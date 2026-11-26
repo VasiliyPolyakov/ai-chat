@@ -1,0 +1,30 @@
+{
+	# No runtime config API: the config only changes with a new image.
+	admin off
+}
+
+# ":80" locally (plain HTTP); a domain name later turns on automatic HTTPS.
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+
+	# API first: /api/* must never fall through to the SPA fallback.
+	handle /api/* {
+		reverse_proxy api:3000 {
+			# Stream responses as they come (SSE), no buffering.
+			flush_interval -1
+		}
+	}
+
+	# Hashed build assets: a missing chunk is a real 404, not index.html served as JS.
+	handle /assets/* {
+		root * /srv
+		file_server
+	}
+
+	# Everything else is the SPA: existing file, otherwise index.html (client-side routing).
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

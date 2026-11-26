@@ -22,6 +22,9 @@
 !apps/web/tsconfig.json
 !apps/web/src/
 
+# web: reverse proxy config baked into the image
+!infra/Caddyfile
+
 # Re-excluded inside the allowed folders
 **/.env*
 **/*.spec.ts

@@ -22,10 +22,10 @@ FROM caddy:2-alpine AS runtime
 RUN addgroup -S caddy && adduser -S -D -H -G caddy caddy \
     && chown -R caddy:caddy /data /config
 
+COPY infra/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/apps/web/dist /srv
 
 USER caddy
 EXPOSE 80
 
-# Plain static server for now; the reverse proxy config (Caddyfile) arrives with the compose stack.
-CMD ["caddy", "file-server", "--root", "/srv", "--listen", ":80"]
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
