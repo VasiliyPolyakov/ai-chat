@@ -26,3 +26,11 @@ coverage/
 
 # Стан оркестратора (OMC)
 .omc/
+
+# Playwright
+test-results/
+playwright-report/
+
+# Local AI-assistant guidelines for the SPA
+apps/web/.claude/
+apps/web/CLAUDE.md

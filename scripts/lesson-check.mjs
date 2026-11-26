@@ -9,6 +9,8 @@
 // 3. Кроки етапу: test/lessons/lNN/sK-*.{e2e,infra,remote}-spec.ts, згруповані за sK.
 // 4. Регресія (за замовчуванням, без --step): e2e попередніх етапів + власні e2e-тести.
 // 5. Статика (без --step): npm run lint (вкл. AC-14) + npm run typecheck.
+// 6. З L03, --full (без --step): CI-еквівалент — check-ci-parity, npm run secrets:scan, npm run test:smoke.
+//    Решту CI-скриптів (lint, typecheck, test, test:infra) покривають кроки 3–5.
 // Підсумок — таблиця; exit != 0 при будь-якому fail. Збої тестової інфраструктури позначаються [tooling].
 // Без зовнішніх залежностей.
 
@@ -35,7 +37,8 @@ const USAGE = `Використання: npm run lesson:check -- N [--step K] [-
   N                номер етапу (1, 2, …)
   --step K         лише крок K (без регресії і статики) — швидкий цикл під час роботи
   --no-regression  без регресії попередніх етапів
-  --full           + remote-тести (GitHub/прод) та infra-тести попередніх етапів — CI-еквівалент
+  --full           + remote-тести (GitHub/прод), infra-тести попередніх етапів; з L03 — check-ci-parity,
+                   secrets:scan і test:smoke (CI-еквівалент)
   --remote URL     базовий URL задеплоєного застосунку для remote-тестів (з L04)
   --verbose        повний вивід jest, змінні тестового оточення (без секретів), версії інструментів`;
 
@@ -218,9 +221,7 @@ if (wantMajor && wantMajor !== haveMajor) {
 }
 
 if (!existsSync(ENV_TEST)) {
-  console.error(
-    '[preflight] [tooling] немає apps/api/.env.test — цей файл має бути в репо',
-  );
+  console.error('[preflight] [tooling] немає apps/api/.env.test — цей файл має бути в репо');
   process.exit(1);
 }
 const envTest = readEnvFile(ENV_TEST);
@@ -490,9 +491,7 @@ function runJest({ project, pattern, label, passWithNoTests = false }) {
       MACHINERY_PATH.test(message) ||
       (COMPILE_ERROR.test(message) && !/apps\/api\/src\/|\/src\//.test(message))
     ) {
-      notes.push(
-        `[tooling] тест-файл ${file} не запустився через збій тестової інфраструктури`,
-      );
+      notes.push(`[tooling] тест-файл ${file} не запустився через збій тестової інфраструктури`);
     } else {
       notes.push(
         `${file}: набір тестів не запустився — найімовірніше, помилка компіляції або старту у коді застосунку (див. вивід вище)`,
@@ -712,6 +711,46 @@ if (opts.step === undefined) {
     } else {
       log(`  npm run ${script}: ok`);
     }
+  }
+  log('');
+}
+
+// ---------------------------------------------------------------- 6. CI-еквівалент (з L03, --full)
+
+if (opts.full && opts.step === undefined && N >= 3) {
+  log('CI-еквівалент');
+  const ciChecks = [
+    ['check-ci-parity', 'node', ['scripts/check-ci-parity.mjs']],
+    ['npm run secrets:scan', 'npm', ['run', '--silent', 'secrets:scan']],
+  ];
+  const docker = dockerPreflight();
+  for (const [name, cmd, args] of ciChecks) {
+    const r = run(cmd, args);
+    rows.push({ name, status: r.code === 0 ? 'pass' : 'fail', tests: '—', note: '' });
+    const text = `${r.stdout}${r.stderr}`.trim();
+    log(`  ${name}: ${r.code === 0 ? 'ok' : 'FAIL'}`);
+    if ((r.code !== 0 || opts.verbose) && text) log(indent(text));
+  }
+  if (!docker.ok) {
+    log(`  ${docker.message}`);
+    rows.push({
+      name: 'npm run test:smoke',
+      status: 'fail',
+      tests: '—',
+      note: 'Docker недоступний',
+    });
+  } else {
+    // Smoke збирає образи й піднімає стек — вивід довгий, тож показуємо його лише при fail/--verbose.
+    const r = run('npm', ['run', '--silent', 'test:smoke'], { timeout: 1_800_000 });
+    const passed = /(\d+) passed/.exec(r.stdout)?.[1];
+    rows.push({
+      name: 'npm run test:smoke',
+      status: r.code === 0 ? 'pass' : 'fail',
+      tests: passed ? `${passed}/${passed}` : '—',
+      note: '',
+    });
+    log(`  npm run test:smoke: ${r.code === 0 ? 'ok' : 'FAIL'}`);
+    if (r.code !== 0 || opts.verbose) log(indent(`${r.stdout}${r.stderr}`.trim().slice(-8_000)));
   }
   log('');
 }

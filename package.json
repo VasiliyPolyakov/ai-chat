@@ -1,7 +1,7 @@
 {
   "name": "ai-chat",
   "private": true,
-  "description": "AI-чат на NestJS + PostgreSQL + TypeORM (монорепо: apps/api, apps/web, infra)",
+  "description": "AI-\u0447\u0430\u0442 \u043d\u0430 NestJS + PostgreSQL + TypeORM (\u043c\u043e\u043d\u043e\u0440\u0435\u043f\u043e: apps/api, apps/web, infra)",
   "license": "UNLICENSED",
   "workspaces": [
     "apps/*"
@@ -25,6 +25,9 @@
     "test": "npm run test -w apps/api && npm run test -w apps/web",
     "test:e2e": "npm run test:e2e -w apps/api",
     "test:infra": "npm run test:infra -w apps/api",
+    "test:smoke": "node scripts/smoke.mjs",
+    "secrets:scan": "node scripts/secrets-scan.mjs",
+    "ci:parity": "node scripts/check-ci-parity.mjs",
     "lesson:check": "node scripts/lesson-check.mjs"
   },
   "devDependencies": {
@@ -36,6 +39,7 @@
     "globals": "^17.13.0",
     "prettier": "^3.9.10",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.72.0"
+    "typescript-eslint": "^8.72.0",
+    "yaml": "^2.9.1"
   }
 }
