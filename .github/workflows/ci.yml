@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  pull_request:
+  # Feature branches are covered by their pull request; main is checked again after merge.
+  push:
+    branches: [main]
+
+# A new push to the same PR cancels the run that is still in progress.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Least privilege by default; jobs that need more ask for it explicitly.
+permissions:
+  contents: read
+
+# Check jobs only call root npm scripts (`npm ci` / `npm run <script>`), the same ones
+# that run locally — see scripts/check-ci-parity.mjs. Job ids are the required check names.
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: chat_test
+        ports:
+          - 5432:5432
+        # Steps start only after the service reports healthy.
+        options: >-
+          --health-cmd "pg_isready -U postgres -d chat_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+    env:
+      # Overrides apps/api/.env.test (5433 is the local db-test port); CI-only credentials.
+      DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/chat_test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run test
+
+  infra:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Builds the images and starts the compose stack; Docker is preinstalled on ubuntu-latest.
+      - run: npm run test:infra
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history: the scan covers every commit, not only the last one.
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      # No dependencies needed: the script uses a local gitleaks or the pinned Docker image.
+      - run: npm run secrets:scan
